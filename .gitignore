@@ -1,8 +1,8 @@
 ### ENV ###
-**/src/main/resources/app.key
-**/src/main/resources/app.pub
-**/src/main/resources/application-properties.yml
-**/src/main/resources/application-prod.yml
+**/resources/application.properties
+**/resources/application-**.yml
+**/resources/app-**.key
+**/resources/app-**.pub
 
 HELP.md
 mvnw
