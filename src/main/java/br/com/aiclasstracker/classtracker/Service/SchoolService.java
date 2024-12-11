@@ -1,6 +1,8 @@
 package br.com.aiclasstracker.classtracker.Service;
 
 import br.com.aiclasstracker.classtracker.Entity.*;
+import br.com.aiclasstracker.classtracker.Exception.NoLessonFoundException;
+import br.com.aiclasstracker.classtracker.Exception.NoStudentClassFoundException;
 import br.com.aiclasstracker.classtracker.Repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -58,10 +60,30 @@ public class SchoolService {
         return presenceHistoryRepository.findQtdPresenceToLesson(studentId, lessonId, curseId, day, semester);
     }
 
+    public CallHistoryEntity findCallHistoryExists(Long professorId, String lessonAbr, Long day, String time, Long semester) {
+        return callHistoryRepository.findCallHistoryExists(professorId, lessonAbr, day, time, semester).orElse(null);
+    }
+
+    public LessonHourEntity findNowLessonForProfessor(Long professorId, String lessonAbr, Long day, String time, Long semester) {
+        return lessonHourRepository.findProfessorLessonNow(professorId, lessonAbr, day, time, semester).orElseThrow(NoLessonFoundException::new);
+    }
+
+    public CallHistoryEntity saveCall(CallHistoryEntity callHistory) {
+        return callHistoryRepository.save(callHistory);
+    }
+
+    public ClassStudentEntity findClassStudentForCall(Long studentRa, String curseAbr, String semester) {
+        return classStudentsRepository.findClassStudentForCall(studentRa, curseAbr, semester).orElse(null);
+    }
+
+    public List<PresenceHistoryEntity> savePresences(List<PresenceHistoryEntity> presenceHistoryList) {
+        return presenceHistoryRepository.saveAll(presenceHistoryList);
+    }
+
     public Long getDayOfWeek() {
         LocalDateTime now = LocalDateTime.now();
         long dayOfWeek = now.getDayOfWeek().getValue();
 
-        return dayOfWeek == 7 ? 1 : dayOfWeek + 4;
+        return dayOfWeek == 7 ? 1 : dayOfWeek + 2;
     }
 }

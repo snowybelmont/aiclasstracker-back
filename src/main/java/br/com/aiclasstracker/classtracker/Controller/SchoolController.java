@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.*;
 
 @RequiredArgsConstructor
@@ -173,6 +174,57 @@ public class SchoolController {
 
             return ResponseEntity.ok(faultsResponseList);
         } catch (UserNotFoundException | NoCallHistoryFoundException e) {
+            return ResponseEntity.status(404).body(null);
+        } catch (UserNoPermissionException e) {
+            return ResponseEntity.status(403).body(null);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(null);
+        }
+    }
+
+    @PreAuthorize("hasAuthority('SCOPE_ROLE_PROFESSOR')")
+    @PostMapping("/users/{ra}/makeCall")
+    public ResponseEntity<List<UserDTO>> makeLessonCall(@RequestHeader("Authorization") String accessToken, @PathVariable("ra") Long ra, @RequestBody MakeCallRequestDTO request) {
+        try {
+            UserEntity userEntity = userService.checkUserIsRequester(ra, accessToken);
+            CallHistoryEntity callHistoryFound = schoolService.findCallHistoryExists(userEntity.getId(), request.lessonAbr(), request.day(), request.time(), request.semester());
+
+            if(callHistoryFound == null) {
+                LessonHourEntity lessonHour = schoolService.findNowLessonForProfessor(userEntity.getId(), request.lessonAbr(), request.day(), request.time(), request.semester());
+                callHistoryFound = new CallHistoryEntity(LocalDateTime.now(), lessonHour);
+                CallHistoryEntity callHistorySaved = schoolService.saveCall(callHistoryFound);
+
+                if(callHistorySaved == null) {
+                    throw new CallSaveException();
+                }
+            }
+
+            List<PresenceHistoryEntity> presencesHistoryList = new ArrayList<>();
+            for(String studentRa : request.studentsRa()) {
+                ClassStudentEntity classStudent = schoolService.findClassStudentForCall(Long.parseLong(studentRa), request.curseAbr(), String.valueOf(request.semester()));
+
+                if(classStudent == null) {
+                    continue;
+                }
+
+                presencesHistoryList.add(new PresenceHistoryEntity(classStudent, callHistoryFound));
+            }
+
+            List<UserDTO> studentsSaved = new ArrayList<>();
+            if(!presencesHistoryList.isEmpty()) {
+                List<PresenceHistoryEntity> presenceHistorySaved = schoolService.savePresences(presencesHistoryList);
+
+                if(presenceHistorySaved.isEmpty()) {
+                    throw new PresencesSaveException();
+                }
+
+                for(PresenceHistoryEntity presenceHistory : presenceHistorySaved) {
+                    studentsSaved.add(new UserDTO(presenceHistory.getClassStudent().getStudent().getRa(), presenceHistory.getClassStudent().getStudent().getFullName()));
+                }
+            }
+
+            return ResponseEntity.ok(studentsSaved);
+        } catch (UserNotFoundException | NoLessonFoundException | NoStudentClassFoundException e) {
             return ResponseEntity.status(404).body(null);
         } catch (UserNoPermissionException e) {
             return ResponseEntity.status(403).body(null);

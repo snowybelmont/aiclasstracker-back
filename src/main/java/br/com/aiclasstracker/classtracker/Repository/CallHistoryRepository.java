@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface CallHistoryRepository extends JpaRepository<CallHistoryEntity, Long> {
     @Query("""
@@ -35,4 +36,16 @@ public interface CallHistoryRepository extends JpaRepository<CallHistoryEntity, 
         AND lh.semester = :semester
     """)
     int findQtdCallsToLesson(Long lessonId, Long curseId, Long day, Long semester);
+
+    @Query("""
+        SELECT ch
+        FROM CallHistoryEntity ch
+        INNER JOIN LessonHourEntity lh ON lh.id = ch.id
+        WHERE lh.professor.id = :professorId
+        AND lh.lesson.abbreviation = :lessonAbr
+        AND lh.day = :day
+        AND TRIM(lh.time) LIKE TRIM(:time)
+        AND lh.semester = :semester
+    """)
+    Optional<CallHistoryEntity> findCallHistoryExists(Long professorId, String lessonAbr, Long day, String time, Long semester);
 }

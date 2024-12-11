@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface LessonHourRepository extends JpaRepository<LessonHourEntity, Long> {
     @Query("""
@@ -29,4 +30,15 @@ public interface LessonHourRepository extends JpaRepository<LessonHourEntity, Lo
         ORDER BY lh.semester, lh.curse.id, lh.day, lh.time
     """)
     List<LessonHourEntity> findAllUserLessons(Long userId);
+
+    @Query("""
+        SELECT lh
+        FROM LessonHourEntity lh
+        WHERE lh.professor.id = :professorId
+        AND lh.lesson.abbreviation = :lessonAbr
+        AND lh.day = :day
+        AND TRIM(lh.time) LIKE TRIM(:time)
+        AND lh.semester = :semester
+    """)
+    Optional<LessonHourEntity> findProfessorLessonNow(Long professorId, String lessonAbr, Long day, String time, Long semester);
 }

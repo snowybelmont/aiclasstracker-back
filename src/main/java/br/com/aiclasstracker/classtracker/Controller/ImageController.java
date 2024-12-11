@@ -21,15 +21,14 @@ import java.util.List;
 public class ImageController {
     private final ImageService imageService;
 
-    @PreAuthorize("hasAuthority('SCOPE_ROLE_PROFESSOR')")
     @PostMapping("/resize")
     public ResponseEntity<List<String>> resizeImage(@RequestBody ResizeImageRequestDTO request) {
         try {
             List<String> listBase64Resizeds = new ArrayList<>();
 
-            for (FaceDTO face : request.faces()) {
-                BufferedImage image = imageService.decodeBase64ToImage(request.photoBase64());
-                BufferedImage croppedImage = imageService.cropImage(image, face.Left(), face.Top(), face.Width(), face.Height(), request.faces());
+            for (FaceDTO faceBounding : request.facesBounding()) {
+                BufferedImage image = imageService.decodeBase64ToImage(request.imageBase64());
+                BufferedImage croppedImage = imageService.cropImage(image, faceBounding.Left(), faceBounding.Top(), faceBounding.Width(), faceBounding.Height(), request.facesBounding());
                 String base64String = imageService.encodeImageToBase64(croppedImage, "JPEG");
 
                 listBase64Resizeds.add(base64String);
