@@ -84,6 +84,6 @@ public class SchoolService {
         LocalDateTime now = LocalDateTime.now();
         long dayOfWeek = now.getDayOfWeek().getValue();
 
-        return dayOfWeek == 7 ? 1 : dayOfWeek + 2;
+        return dayOfWeek == 7 ? 1 : dayOfWeek + 1;
     }
 }
