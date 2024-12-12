@@ -6,10 +6,12 @@ import br.com.aiclasstracker.classtracker.Entity.PresenceHistoryEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface PresenceHistoryRepository extends JpaRepository<PresenceHistoryEntity, Long> {
     Optional<PresenceHistoryEntity> findByClassStudentAndCallHistory(ClassStudentEntity classStudent, CallHistoryEntity callHistory);
+    List<PresenceHistoryEntity> findAllByCallHistory(CallHistoryEntity callHistory);
 
     @Query("""
         SELECT COUNT(1)

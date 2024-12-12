@@ -1,6 +1,7 @@
 package br.com.aiclasstracker.classtracker.Repository;
 
 import br.com.aiclasstracker.classtracker.Entity.LessonHourEntity;
+import br.com.aiclasstracker.classtracker.Entity.UserEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -41,4 +42,6 @@ public interface LessonHourRepository extends JpaRepository<LessonHourEntity, Lo
         AND lh.semester = :semester
     """)
     Optional<LessonHourEntity> findProfessorLessonNow(Long professorId, String lessonAbr, Long day, String time, Long semester);
+
+    Optional<LessonHourEntity> findByProfessorAndDayAndTime(UserEntity professor, Long day, String time);
 }

@@ -7,6 +7,7 @@ import br.com.aiclasstracker.classtracker.Service.SchoolService;
 import br.com.aiclasstracker.classtracker.Service.UserService;
 import br.com.aiclasstracker.classtracker.Utils.RoleEnum;
 import lombok.RequiredArgsConstructor;
+import org.apache.coyote.Response;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -80,10 +81,20 @@ public class SchoolController {
                         FaceStudentEntity faceStudent = schoolService.findStudentPhoto(student);
                         PresenceHistoryEntity presenceHistory = schoolService.findStudentPresenceInCall(classStudent, callHistory);
 
+                        String[] times = callHistory.getLessonHour().getTime().split(" - ");
+                        int endHour = Integer.parseInt(times[0].split(":")[0]);
+                        int endMinutes = Integer.parseInt(times[0].split(":")[1]);
+
+                        int period = 20 >= callHistory.getCallDate().getHour()
+                                && 50 >= callHistory.getCallDate().getMinute() ? 0
+                                : 1;
+
                         historyResponseList.add(
                                 new HistoryResponseDTO(
                                         callHistory.getCallDate(),
                                         callHistory.getLessonHour().getLesson().getAbbreviation(),
+                                        callHistory.getLessonHour().getTime(),
+                                        period,
                                         classStudent.getClassField().getClassDesc(),
                                         classStudent.getClassField().getCurse().getAbbreviation(),
                                         student.getRa(),
@@ -103,6 +114,8 @@ public class SchoolController {
                                 new HistoryResponseDTO(
                                         callHistory.getCallDate(),
                                         callHistory.getLessonHour().getLesson().getAbbreviation(),
+                                        null,
+                                        3,
                                         classStudent.getClassField().getClassDesc(),
                                         classStudent.getClassField().getCurse().getAbbreviation(),
                                         null,
@@ -207,7 +220,7 @@ public class SchoolController {
                     continue;
                 }
 
-                presencesHistoryList.add(new PresenceHistoryEntity(classStudent, callHistoryFound));
+                presencesHistoryList.add(new PresenceHistoryEntity(classStudent, callHistoryFound, false));
             }
 
             List<UserDTO> studentsSaved = new ArrayList<>();
@@ -230,6 +243,78 @@ public class SchoolController {
             return ResponseEntity.status(403).body(null);
         } catch (Exception e) {
             return ResponseEntity.status(500).body(null);
+        }
+    }
+
+    @PreAuthorize("hasAuthority('SCOPE_ROLE_PROFESSOR')")
+    @PostMapping("/users/{ra}/checkCall")
+    public ResponseEntity<CheckCallResponseDTO> checkCallMake(@RequestHeader("Authorization") String accessToken, @PathVariable("ra") Long ra, @RequestBody CheckCallRequestDTO request) {
+        try {
+            UserEntity userEntity = userService.checkUserIsRequester(ra, accessToken);
+
+            boolean foundCall = false;
+            List<PresenceHistoryEntity> presenceHistory = new ArrayList<>();
+            for(DailyLessonsResponseDTO dailyLesson : request.dailyLessons()) {
+                LessonHourEntity lessonFound = schoolService.findNowLessonForProfessor(userEntity.getId(), dailyLesson.lessonAbr(), (dailyLesson.day() + 1), dailyLesson.time(), dailyLesson.semester());
+                CallHistoryEntity callHistoryFound = schoolService.findCallByDate(lessonFound.getId());
+
+                if(callHistoryFound != null) {
+                    foundCall  = true;
+
+                    List<PresenceHistoryEntity> presencesFound =  schoolService.findPresencesByCall(callHistoryFound);
+                    presenceHistory.addAll(presencesFound);
+                }
+            }
+
+            if(!foundCall || presenceHistory.isEmpty()) {
+                return ResponseEntity.ok(new CheckCallResponseDTO(false));
+            }
+
+            boolean havePendencies = false;
+            for(PresenceHistoryEntity presenceHistoryEntity : presenceHistory) {
+                if(presenceHistoryEntity.getSendedFatec() != null && !presenceHistoryEntity.getSendedFatec().equals(true)) {
+                    havePendencies = true;
+                    break;
+                }
+            }
+
+            return ResponseEntity.ok(new CheckCallResponseDTO(havePendencies));
+        } catch (UserNotFoundException | NoLessonFoundException | NoStudentClassFoundException e) {
+            return ResponseEntity.status(404).body(new CheckCallResponseDTO(false));
+        } catch (UserNoPermissionException e) {
+            return ResponseEntity.status(403).body(new CheckCallResponseDTO(false));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(new CheckCallResponseDTO(false));
+        }
+    }
+
+    @PreAuthorize("hasAuthority('SCOPE_ROLE_PROFESSOR')")
+    @PostMapping("/users/{ra}/sendToFatec")
+    public ResponseEntity<String> sendToFatec(@RequestHeader("Authorization") String accessToken, @PathVariable("ra") Long ra) {
+        try {
+            UserEntity userEntity = userService.checkUserIsRequester(ra, accessToken);
+
+            LocalDateTime now = LocalDateTime.now();
+            String time = (now.getHour() < 20 || (now.getHour() == 20 && now.getMinute() <= 40)) ? "19:00 - 20:40" : "20:50 - 22:30";
+            Long day = schoolService.getDayOfWeek();
+
+            LessonHourEntity lessonHourFound = schoolService.findNowLessonForCall(userEntity, day, time);
+            CallHistoryEntity callHistoryFound = schoolService.findCallByLessonHour(lessonHourFound.getId());
+            List<PresenceHistoryEntity> presencesFound =  schoolService.findPresencesByCall(callHistoryFound);
+
+            List<String> studentsRas = new ArrayList<>();
+            for(PresenceHistoryEntity presenceHistoryEntity : presencesFound) {
+                studentsRas.add(String.valueOf(presenceHistoryEntity.getClassStudent().getStudent().getRa()));
+            }
+            schoolService.makeCallInFatec(lessonHourFound.getLesson().getName(), time.split(" - ")[0], studentsRas);
+
+            return ResponseEntity.ok("OK");
+        } catch (UserNotFoundException | NoLessonFoundException | NoStudentClassFoundException e) {
+            return ResponseEntity.status(404).body("new CheckCallResponseDTO(false)");
+        } catch (UserNoPermissionException e) {
+            return ResponseEntity.status(403).body("new CheckCallResponseDTO(false)");
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("new CheckCallResponseDTO(false)");
         }
     }
 }

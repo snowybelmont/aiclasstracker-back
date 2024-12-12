@@ -46,6 +46,23 @@ public interface CallHistoryRepository extends JpaRepository<CallHistoryEntity, 
         AND lh.day = :day
         AND TRIM(lh.time) LIKE TRIM(:time)
         AND lh.semester = :semester
+        AND ch.callDate = (SELECT MAX(ch2.callDate) FROM CallHistoryEntity ch2 WHERE ch2.lessonHour.id = ch.lessonHour.id)
     """)
     Optional<CallHistoryEntity> findCallHistoryExists(Long professorId, String lessonAbr, Long day, String time, Long semester);
+
+    @Query("""
+        SELECT ch
+        FROM CallHistoryEntity ch
+        WHERE ch.lessonHour.id = :lessonHourId
+        AND ch.callDate = (SELECT MAX(ch2.callDate) FROM CallHistoryEntity ch2 WHERE ch2.lessonHour.id = ch.lessonHour.id)
+    """)
+    Optional<CallHistoryEntity> findCallByDate(Long lessonHourId);
+
+    @Query("""
+        SELECT ch
+        FROM CallHistoryEntity ch
+        WHERE ch.lessonHour.id = :lessonHourId
+        AND DATE(ch.callDate) = DATE(NOW())
+    """)
+    Optional<CallHistoryEntity> findCallByDateNow(Long lessonHourId);
 }

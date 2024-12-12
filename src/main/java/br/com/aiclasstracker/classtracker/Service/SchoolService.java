@@ -7,8 +7,16 @@ import br.com.aiclasstracker.classtracker.Repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.ProtocolException;
+import java.net.URL;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.StringJoiner;
 
 @RequiredArgsConstructor
 @Service
@@ -78,6 +86,52 @@ public class SchoolService {
 
     public List<PresenceHistoryEntity> savePresences(List<PresenceHistoryEntity> presenceHistoryList) {
         return presenceHistoryRepository.saveAll(presenceHistoryList);
+    }
+
+    public List<PresenceHistoryEntity> findPresencesByCall(CallHistoryEntity callHistory) {
+        return presenceHistoryRepository.findAllByCallHistory(callHistory);
+    }
+
+    public CallHistoryEntity findCallByDate(Long lessonHourId) {
+        return callHistoryRepository.findCallByDate(lessonHourId).orElse(null);
+    }
+
+    public LessonHourEntity findNowLessonForCall(UserEntity professor, Long day, String time) {
+        return lessonHourRepository.findByProfessorAndDayAndTime(professor, day, time).orElse(null);
+    }
+
+    public CallHistoryEntity findCallByLessonHour(Long lessonHourId) {
+        return callHistoryRepository.findCallByDateNow(lessonHourId).orElse(null);
+    }
+
+    public void makeCallInFatec(String lessonName, String hour, List<String> studentsRas) throws IOException {
+        URL url = new URL("http://localhost:5000/makeCall");
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod("POST");
+        connection.setRequestProperty("Content-Type", "application/json");
+
+        StringJoiner sj = new StringJoiner(",");
+        for (String ra : studentsRas) {
+            sj.add("\"" + ra + "\"");
+        }
+
+        String data = "{\"className\":\"" + lessonName + "\",\"hour\":\"" + hour + "\",\"studentsRas\":[" + sj.toString() + "]}";
+        connection.setDoOutput(true);
+        OutputStream outputStream = connection.getOutputStream();
+        outputStream.write(data.getBytes());
+        outputStream.close();
+
+        int responseCode = connection.getResponseCode();
+        if (responseCode == 200) {
+            BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                System.out.println(line);
+            }
+            reader.close();
+        } else {
+            System.out.println("Erro: " + responseCode);
+        }
     }
 
     public Long getDayOfWeek() {

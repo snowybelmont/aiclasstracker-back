@@ -32,4 +32,8 @@ public class PresenceHistoryEntity implements Serializable {
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(name = "call_id", nullable = false)
     private CallHistoryEntity callHistory;
+
+    @NonNull
+    @Column(name = "sended_fatec", nullable = true, columnDefinition = "BOOLEAN")
+    private Boolean sendedFatec;
 }
