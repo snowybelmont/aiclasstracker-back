@@ -165,7 +165,7 @@ public class SchoolController {
                             lessonHour.getProfessor().getSurname(),
                             qtdCalls,
                             qtdCalls - qtdPresence,
-                            qtdCalls == 0 ? 0.0 : qtdPresence == 0 ? 100.0 : ((double) (qtdCalls - qtdPresence) / qtdCalls) * 100,
+                            qtdCalls == 0 ? 0.0 : qtdPresence == 0 ? 100.0 : ((double) (qtdCalls - qtdPresence) / lessonHour.getLesson().getMaxFalts()) * 100,
                             lessonHour.getLesson().getMaxFalts()
                         )
                     );
