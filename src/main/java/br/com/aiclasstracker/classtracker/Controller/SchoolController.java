@@ -7,7 +7,6 @@ import br.com.aiclasstracker.classtracker.Service.SchoolService;
 import br.com.aiclasstracker.classtracker.Service.UserService;
 import br.com.aiclasstracker.classtracker.Utils.RoleEnum;
 import lombok.RequiredArgsConstructor;
-import org.apache.coyote.Response;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -220,7 +219,7 @@ public class SchoolController {
                     continue;
                 }
 
-                presencesHistoryList.add(new PresenceHistoryEntity(classStudent, callHistoryFound, false));
+                presencesHistoryList.add(new PresenceHistoryEntity(classStudent, callHistoryFound));
             }
 
             List<UserDTO> studentsSaved = new ArrayList<>();
@@ -270,15 +269,7 @@ public class SchoolController {
                 return ResponseEntity.ok(new CheckCallResponseDTO(false));
             }
 
-            boolean havePendencies = false;
-            for(PresenceHistoryEntity presenceHistoryEntity : presenceHistory) {
-                if(presenceHistoryEntity.getSendedFatec() != null && !presenceHistoryEntity.getSendedFatec().equals(true)) {
-                    havePendencies = true;
-                    break;
-                }
-            }
-
-            return ResponseEntity.ok(new CheckCallResponseDTO(havePendencies));
+            return ResponseEntity.ok(new CheckCallResponseDTO(true));
         } catch (UserNotFoundException | NoLessonFoundException | NoStudentClassFoundException e) {
             return ResponseEntity.status(404).body(new CheckCallResponseDTO(false));
         } catch (UserNoPermissionException e) {
@@ -303,18 +294,21 @@ public class SchoolController {
             List<PresenceHistoryEntity> presencesFound =  schoolService.findPresencesByCall(callHistoryFound);
 
             List<String> studentsRas = new ArrayList<>();
-            for(PresenceHistoryEntity presenceHistoryEntity : presencesFound) {
-                studentsRas.add(String.valueOf(presenceHistoryEntity.getClassStudent().getStudent().getRa()));
+            List<PresenceHistoryEntity> listPresences = new ArrayList<>();
+            for(PresenceHistoryEntity presenceHistory : presencesFound) {
+                studentsRas.add(String.valueOf(presenceHistory.getClassStudent().getStudent().getRa()));
+;
+                listPresences.add(presenceHistory);
             }
             schoolService.makeCallInFatec(lessonHourFound.getLesson().getName(), time.split(" - ")[0], studentsRas);
 
             return ResponseEntity.ok("OK");
         } catch (UserNotFoundException | NoLessonFoundException | NoStudentClassFoundException e) {
-            return ResponseEntity.status(404).body("new CheckCallResponseDTO(false)");
+            return ResponseEntity.status(404).body(null);
         } catch (UserNoPermissionException e) {
-            return ResponseEntity.status(403).body("new CheckCallResponseDTO(false)");
+            return ResponseEntity.status(403).body(null);
         } catch (Exception e) {
-            return ResponseEntity.status(500).body("new CheckCallResponseDTO(false)");
+            return ResponseEntity.status(500).body(null);
         }
     }
 }

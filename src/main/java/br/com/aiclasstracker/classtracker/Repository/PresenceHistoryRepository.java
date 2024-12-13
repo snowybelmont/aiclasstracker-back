@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface PresenceHistoryRepository extends JpaRepository<PresenceHistoryEntity, Long> {
+
     Optional<PresenceHistoryEntity> findByClassStudentAndCallHistory(ClassStudentEntity classStudent, CallHistoryEntity callHistory);
     List<PresenceHistoryEntity> findAllByCallHistory(CallHistoryEntity callHistory);
 

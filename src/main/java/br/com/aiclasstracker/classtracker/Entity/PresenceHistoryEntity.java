@@ -1,10 +1,7 @@
 package br.com.aiclasstracker.classtracker.Entity;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
+import lombok.*;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -32,8 +29,4 @@ public class PresenceHistoryEntity implements Serializable {
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(name = "call_id", nullable = false)
     private CallHistoryEntity callHistory;
-
-    @NonNull
-    @Column(name = "sended_fatec", nullable = true, columnDefinition = "BOOLEAN")
-    private Boolean sendedFatec;
 }
